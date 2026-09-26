@@ -21,6 +21,7 @@ import {
 } from "@/lib/wassist";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 /** Max WhatsApp messages per inbound text: 1 opener + up to this many stops. */
 const MAX_STOPS = 5;
