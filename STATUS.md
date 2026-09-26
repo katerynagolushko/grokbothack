@@ -55,6 +55,7 @@ cd miranda && npm run build && npm start
 
 ## Log
 
+- **26 Sep, ~15:45:** Fixed mismatched card images: no more Wikimedia/Openverse stock paired with shop Links. Photos from same-retailer CDN (site-scoped search), garment-checked, proxied via `/api/product-image`. Locked blazer path unchanged. Prod: white pants → trousers; blue t shirt → tees; black blazer → 4 local stills. https://miranda-three-chi.vercel.app
 - **26 Sep, ~15:45:** Real listing photos via OpenAI Responses web_search (12s) + `/api/product-image` proxy. Locked blazer path unchanged. No Wikimedia. Clothing asks never empty.
 - **26 Sep, ~15:30:** Fixed clothing asks returning "Nothing worth your time." Root cause: failed web/image scrapes emptied stops and `openerLine` treated that as small talk. Now `buildLocalShopProducts` always returns 3 Mango/H&M/COS|Zara search cards for any parsed garment (blank image OK). Locked blazer path unchanged. Prod verified: `white pants` → 3 stops, no nothing-line. https://miranda-three-chi.vercel.app
 - **26 Sep, ~15:30:** Miranda spoken copy tightened to Priestley register (cold, short, dismissive; original lines only). Journey card lines stay non-rejecting for looked-up blazers/web ("Black. Structured." / "Wear it."). Opener "Four. Don't browse." Small talk still "State what you need." / "Nothing worth your time." Built and redeployed.
