@@ -1,5 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { buildJourney, closingLine, dedupeStops, openerLine, polishStops } from "@/lib/journey";
+import { recallStops, rememberStops } from "@/lib/lastStops";
+import { applyPick } from "@/lib/pick";
 import { analyseMessage, llmAvailable, smallTalk } from "@/lib/llm";
 import { getProfile } from "@/lib/profiles";
 import { recordPurchase, shopperForPhone } from "@/lib/purchases";
@@ -79,12 +81,16 @@ async function replyWithJourney(
   want: string,
   stops: JourneyStop[],
   deliveryId: string,
+  openerOverride?: string,
 ): Promise<void> {
   const unique = dedupeStops(stops).slice(0, MAX_STOPS);
   const results: WassistSendResult[] = [];
   const started = Date.now();
 
-  const opener = await sendWassistText(conversationId, openerLine(want, unique));
+  const opener = await sendWassistText(
+    conversationId,
+    openerOverride ?? openerLine(want, unique),
+  );
   results.push(opener);
 
   if (opener.ok) {
@@ -98,7 +104,7 @@ async function replyWithJourney(
       results.push(result);
       if (!result.ok) break;
     }
-    const close = closingLine(unique);
+    const close = openerOverride ? null : closingLine(unique);
     if (close && results.every((r) => r.ok) && unique.length > 1) {
       results.push(await sendWassistText(conversationId, close));
     }
@@ -246,6 +252,22 @@ export async function POST(req: NextRequest) {
   const want = text || "something to wear";
   const base = hostBase(req);
 
+  const prior = recallStops(`wa:${conversationId}`);
+  const picked = text ? applyPick(text, prior) : null;
+  if (picked) {
+    after(() =>
+      replyWithJourney(conversationId, want, picked.stops, deliveryId, picked.opener),
+    );
+    return NextResponse.json({
+      ok: true,
+      event: eventName,
+      picked: true,
+      opener: picked.opener,
+      stops: picked.stops.map((s) => s.product.id),
+      hrefs: picked.stops.map((s) => s.href),
+    });
+  }
+
   // Optional language layer (lib/llm.ts): purchase reports and small talk get
   // one cold line and never start a journey. No key or any failure -> journey.
   if (text && llmAvailable()) {
@@ -271,6 +293,7 @@ export async function POST(req: NextRequest) {
   }
 
   const stops = dedupeStops(await buildJourney(want, undefined, base));
+  if (stops.length > 0) rememberStops(`wa:${conversationId}`, stops);
   const planned = 1 + Math.min(stops.length, MAX_STOPS);
 
   // Ack now; polish lines (optional LLM) and send after the response is flushed.

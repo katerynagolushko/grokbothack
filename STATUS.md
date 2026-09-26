@@ -2,10 +2,11 @@
 
 Living handoff file. Update it whenever a decision is made, a blocker appears, or a step finishes. Newest information at the top of each section.
 
-**Last updated:** 26 Sep 2026, ~16:05. **Code freeze:** 16:30 (official page). **Top 5 demos:** 17:30.
+**Last updated:** 26 Sep 2026, ~16:20. **Code freeze:** 16:30 (official page). **Top 5 demos:** 17:30.
 
 ## Where we are
 
+- **Follow-up picks.** After a journey, "the 2nd one", "first", "last", "#2", "number 2", "the mango", or "get me the asos" confirms that stop and shows its retailer Link. The home chat keeps the last stops in the session; the shop grid stays on those stops and highlights the pick. `/api/journey` accepts `lastStops` and remembers the last web journey on the instance (WhatsApp too, per conversation). "hi" is still "Nothing worth your time." Locked four-blazer path unchanged.
 - **Home shop grid follows the ask.** Send / Demo leaves Runway & Archive and shows the same `/api/journey` stops as the chat (real ASOS / Mango / H&M / … links). While the reply is in flight the thread and the shop both say "Looking." If the API is empty or times out, a clothing ask still gets three retailer search cards; small talk still gets "Nothing worth your time." Locked black-blazer path unchanged (four retailer PDPs).
 - **Other clothing listings:** OpenAI Responses `web_search` runs in parallel with the image pool. Cards use `GET /api/product-image?u=` (browser UA proxy) so WhatsApp never hotlinks retailer CDNs. Omit image if none; never Wikimedia. A stated colour that the title contradicts is dropped; prices over the typed cap are dropped. Synthetic prices stay inside the cap. Fallback: shop-search Links. Locked black-blazer path unchanged.
 - **Black blazer path still locked.** "black blazer" / blazer / dinner blazer / black jacket → the four live retailers only (ASOS, Wilson Carter, Nobody's Child, Mango). Opener "Four stops. Don't wander." Cards and WhatsApp **Link** buttons go to the real product URLs. Photos at `public/products/{asos-blazer,wilson-charlotte,nobodys-child-blazer,mango-blazer}.jpg`.
@@ -56,6 +57,7 @@ cd miranda && npm run build && npm start
 
 ## Log
 
+- **26 Sep, ~16:20:** Follow-up item picks. "i wanna get the 2nd one" after the black blazer journey confirms Wilson Carter (second of four) with the retailer Link. Small talk unchanged. Locked blazer path unchanged.
 - **26 Sep, ~16:05:** Home grid now shows journey stops (chat cards and the shop side match). Send shows "Looking." at once. Client waits 28s, then retailer-search cards if the API is empty. Non-locked colour/budget filter: conflicting colour titles dropped, over-cap prices dropped, synthetic prices clamped. Locked blazer path unchanged. Redeploy `miranda/` from this branch (Vercel project `miranda`) so https://miranda-three-chi.vercel.app picks it up.
 - **26 Sep, ~15:45:** Fixed mismatched card images: no more Wikimedia/Openverse stock paired with shop Links. Photos from same-retailer CDN (site-scoped search), garment-checked, proxied via `/api/product-image`. Locked blazer path unchanged. Prod: white pants → trousers; blue t shirt → tees; black blazer → 4 local stills. https://miranda-three-chi.vercel.app
 - **26 Sep, ~15:45:** Real listing photos via OpenAI Responses web_search (12s) + `/api/product-image` proxy. Locked blazer path unchanged. No Wikimedia. Clothing asks never empty.

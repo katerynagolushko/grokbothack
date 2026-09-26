@@ -4,6 +4,8 @@ import {
   flattenRepliesForText,
   formatJourneyReplies,
 } from "@/lib/journey";
+import { recallStops, rememberStops } from "@/lib/lastStops";
+import { applyPick } from "@/lib/pick";
 
 export const runtime = "nodejs";
 
@@ -86,9 +88,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  void from; // reserved for per-shopper profiles later
-  const stops = await buildJourney(text, undefined, base);
-  const replies = formatJourneyReplies(text, stops);
+  const session = `wa-hook:${from}`;
+  const picked = text ? applyPick(text, recallStops(session)) : null;
+  const stops = picked ? picked.stops : await buildJourney(text, undefined, base);
+  if (!picked && stops.length > 0) rememberStops(session, stops);
+  const replies = formatJourneyReplies(
+    text,
+    stops,
+    picked ? { opener: picked.opener, closing: null } : undefined,
+  );
 
   if (isTwilioForm(contentType)) {
     const flat = flattenRepliesForText(replies);
