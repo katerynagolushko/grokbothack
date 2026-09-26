@@ -302,9 +302,10 @@ export function closingLine(stops: JourneyStop[]): string | null {
 export function formatJourneyReplies(
   want: string,
   stops: JourneyStop[],
+  voice?: { opener?: string; closing?: string | null },
 ): MirandaReply[] {
   const replies: MirandaReply[] = [];
-  replies.push({ kind: "plan", text: openerLine(want, stops) });
+  replies.push({ kind: "plan", text: voice?.opener ?? openerLine(want, stops) });
   if (stops.length === 0) return replies;
 
   for (const stop of stops) {
@@ -319,7 +320,7 @@ export function formatJourneyReplies(
     });
   }
 
-  const close = closingLine(stops);
+  const close = voice ? voice.closing : closingLine(stops);
   if (close) replies.push({ kind: "plan", text: close });
   return replies;
 }

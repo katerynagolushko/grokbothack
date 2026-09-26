@@ -14,6 +14,7 @@ import React, {
 import { clientShopCards } from "@/lib/clientShops";
 import { isDemoBlazerQuery } from "@/lib/demoCatalogue";
 import { buildCatalogueJourney, closingLine, countWord, openerLine } from "@/lib/journey";
+import { listingLabel, matchStopPick, pickConfirmLine } from "@/lib/pick";
 import { PRODUCTS, productImageSrc, productPath } from "@/lib/products";
 import { DEMO_SHOPPER } from "@/lib/shopper";
 import type { Product, Verdict, VerdictKind } from "@/lib/types";
@@ -218,6 +219,7 @@ export function ShoppingDemo() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const productRefs = useRef<Record<string, HTMLElement | null>>({});
   const walkGen = useRef(0);
+  const lastStopsRef = useRef<ApiStop[]>([]);
 
   const counts = useMemo(
     () => storeCounts(PRODUCTS, DEMO_SHOPPER),
@@ -280,6 +282,7 @@ export function ShoppingDemo() {
         const journey = await journeyPromise;
         if (gen !== walkGen.current) return;
         const stops = interleaveStops(journey.stops ?? []);
+        if (stops.length > 0) lastStopsRef.current = stops;
         setShopStops(stops);
         setShopPhase(stops.length > 0 ? "results" : "catalogue");
 
@@ -344,10 +347,68 @@ export function ShoppingDemo() {
     [focusProduct],
   );
 
+  const runPick = useCallback(
+    async (want: string, prior: ApiStop[], index: number) => {
+      const stop = prior[index];
+      if (!stop) return;
+      const gen = ++walkGen.current;
+      setWalking(true);
+      setMirandaOn(true);
+      const opener = pickConfirmLine(index, prior.length, listingLabel(stop), want);
+      setShopQuery(opener);
+      setShopPhase("results");
+      setShopStops(prior);
+      const external = /^https?:\/\//i.test(stop.href);
+      const local = PRODUCTS.find((p) => p.id === stop.id);
+
+      setMessages((m) => [
+        ...m,
+        { id: `u-${Date.now()}`, from: "user", text: want },
+      ]);
+
+      try {
+        await sleep(280);
+        if (gen !== walkGen.current) return;
+        focusProduct(stop.id);
+        setMessages((m) => [
+          ...m,
+          {
+            id: `pick-${gen}`,
+            from: "miranda",
+            kind: "plan",
+            text: opener,
+          },
+          {
+            id: `s-${stop.id}-${gen}`,
+            from: "miranda",
+            kind: stop.kind,
+            text: stop.because,
+            productId: stop.id,
+            productTitle: stop.title,
+            priceGbp: stop.priceGbp,
+            imageSrc: stop.imageUrl ?? (local ? productImageSrc(local) : undefined),
+            colour: stop.colour ?? local?.colour,
+            href: stop.href || (local ? productPath(local, true) : undefined),
+            external,
+          },
+        ]);
+      } finally {
+        if (gen === walkGen.current) setWalking(false);
+      }
+    },
+    [focusProduct],
+  );
+
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     const want = input.trim();
     if (!want || walking) return;
+    const prior = lastStopsRef.current;
+    const index = matchStopPick(want, prior);
+    if (index != null) {
+      void runPick(want, prior, index);
+      return;
+    }
     void runJourney(want);
   }
 
