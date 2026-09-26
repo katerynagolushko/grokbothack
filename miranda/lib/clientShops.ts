@@ -2,6 +2,7 @@ import {
   garmentWord,
   looksLikeClothingAsk,
   parseIntent,
+  withInferredGarments,
   type GarmentKind,
 } from "./intent";
 
@@ -78,14 +79,14 @@ function capitalise(s: string): string {
 export function clientShopCards(want: string): ClientShopCard[] {
   const trimmed = want.trim();
   if (!trimmed) return [];
-  const intent = parseIntent(trimmed);
+  const intent = withInferredGarments(trimmed, parseIntent(trimmed));
   if (intent.garments.length === 0 && !looksLikeClothingAsk(trimmed)) return [];
   const garment = (intent.garments[0] ?? "top") as GarmentKind;
   const colour = intent.colours[0];
-  const bits = [colour, intent.fabrics[0], garmentWord(garment)];
-  if (intent.maxBudgetGbp) bits.push(`under £${intent.maxBudgetGbp}`);
-  const query = bits.filter(Boolean).join(" ");
-  const label = [colour, garmentWord(garment)].filter(Boolean).map(capitalise).join(" ");
+  const query = trimmed.slice(0, 80);
+  const label =
+    [colour, garmentWord(garment)].filter(Boolean).map(capitalise).join(" ") ||
+    capitalise(trimmed);
   const because = colour ? `${capitalise(colour)}. Wear it.` : "Wear it.";
   return SHOPS.map((shop) => {
     const href = shop.searchUrl(query);

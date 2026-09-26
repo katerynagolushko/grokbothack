@@ -113,6 +113,8 @@ const CONFLICT_TERMS: Record<GarmentKind, string[]> = {
   cardigan: ["dress", "trouser", "trousers", "pant", "pants", "t-shirt", "tshirt"],
   hoodie: ["dress", "blazer", "skirt", "trouser", "trousers"],
   sweat: ["dress", "blazer", "skirt", "trouser", "trousers"],
+  shoes: ["dress", "blazer", "trouser", "trousers", "skirt", "t-shirt", "tee"],
+  bag: ["dress", "blazer", "trouser", "trousers", "t-shirt", "tee", "shoe", "shoes"],
 };
 
 const REJECT_AUDIENCE =
@@ -536,11 +538,18 @@ export async function searchWebProducts(
   return kept;
 }
 
-export function buildLocalShopProducts(intent: QueryIntent, limit = 3): Product[] {
+export function buildLocalShopProducts(
+  intent: QueryIntent,
+  limit = 3,
+  rawWant = "",
+): Product[] {
   const garment = (intent.garments[0] ?? "top") as GarmentKind;
-  const query = buildQuery(intent, garment);
+  const fromWant = rawWant.trim().replace(/\s+/g, " ").slice(0, 80);
+  const query = fromWant || buildQuery(intent, garment);
   const colour = intent.colours[0];
-  const label = titleCase([colour, garmentWord(garment)].filter(Boolean).join(" "));
+  const label = titleCase(
+    fromWant || [colour, garmentWord(garment)].filter(Boolean).join(" "),
+  );
   return pickRetailers(query, limit).map((shop) => {
     const url = shop.searchUrl(query);
     return {

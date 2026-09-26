@@ -15,7 +15,9 @@ export type GarmentKind =
   | "sweat"
   | "top"
   | "knit"
-  | "cardigan";
+  | "cardigan"
+  | "shoes"
+  | "bag";
 
 export type VerdictKind = "bad" | "suggest" | "meh";
 

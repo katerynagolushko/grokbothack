@@ -32,6 +32,11 @@ const DEFS: { kind: GarmentKind; keywords: string[] }[] = [
   { kind: "tee", keywords: ["tee", "tees", "t-shirt", "tshirt", "t shirt", "t-shirts", "tshirts"] },
   { kind: "shirt", keywords: ["shirt", "shirts", "blouse", "button-down", "button down", "oxford"] },
   { kind: "top", keywords: ["top", "tops", "vest", "cami", "camisole"] },
+  {
+    kind: "shoes",
+    keywords: ["shoes", "shoe", "boots", "boot", "sandals", "sandal", "heels", "heel", "trainers", "sneakers"],
+  },
+  { kind: "bag", keywords: ["bag", "bags", "handbag", "tote", "purse", "clutch"] },
 ];
 
 /**
@@ -139,17 +144,42 @@ function wordBoundaryIncludes(hay: string, needle: string): boolean {
 const CLOTHING_SOFT =
   /\b(clothes|clothing|outfit|outfits|wear|wardrobe|piece|pieces|garment|garments)\b/i;
 
+/** Occasion / vague shopping cues that still imply "find me clothes". */
+const SHOPPING_CUE =
+  /\b(dinner|wedding|party|interview|date|something for|looking for|need (a|an|some)|outfit for|to wear|buy me|find me|show me)\b/i;
+
 /**
  * True when the shopper is asking for clothes (not "hi" / "who are you").
- * Garment keyword, soft clothing word, or colour plus a clothing-ish noun.
+ * Garment, colour, soft clothing word, or shopping / occasion cue.
  */
 export function looksLikeClothingAsk(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
   const intent = parseIntent(trimmed);
   if (intent.garments.length > 0) return true;
+  if (intent.colours.length > 0) return true;
   if (CLOTHING_SOFT.test(trimmed)) return true;
+  if (SHOPPING_CUE.test(trimmed)) return true;
   return false;
+}
+
+/**
+ * When parseIntent left garments empty but the ask is still shopping,
+ * pick a family so search / local shop cards can run.
+ */
+export function withInferredGarments(want: string, intent: QueryIntent): QueryIntent {
+  if (intent.garments.length > 0) return intent;
+  const lower = want.toLowerCase();
+  if (/\b(dinner|wedding|date)\b/.test(lower)) {
+    return { ...intent, garments: ["dress"] };
+  }
+  if (/\b(party|interview)\b/.test(lower)) {
+    return { ...intent, garments: ["blazer"] };
+  }
+  if (looksLikeClothingAsk(want)) {
+    return { ...intent, garments: ["top"] };
+  }
+  return intent;
 }
 
 export function parseIntent(text: string): QueryIntent {

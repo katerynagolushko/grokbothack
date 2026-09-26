@@ -74,7 +74,9 @@ export function HomeChat() {
       {error && <p className="home-chat__error">{error}</p>}
 
       {stops && stops.length === 0 && (
-        <p className="home-chat__empty">Nothing worth your time.</p>
+        <p className="home-chat__empty">
+          {replies?.find((r) => r.kind === "plan")?.text ?? "State the garment."}
+        </p>
       )}
 
       {stops && stops.length > 0 && (

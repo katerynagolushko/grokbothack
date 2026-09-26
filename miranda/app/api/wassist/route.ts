@@ -286,7 +286,7 @@ export async function POST(req: NextRequest) {
       });
     }
     if (analysis?.intent.isSmallTalk && !analysis.intent.isShoppingAsk) {
-      const line = (await smallTalk(text, getProfile(shopperId).name)) ?? "State what you need.";
+      const line = (await smallTalk(text, getProfile(shopperId).name)) ?? "State the garment.";
       after(() => sendWassistText(conversationId, line));
       return NextResponse.json({ ok: true, event: eventName, smallTalk: true, reply: line });
     }

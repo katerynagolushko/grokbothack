@@ -89,7 +89,7 @@ async function ensureModel(): Promise<string> {
 
 const GARMENTS: GarmentKind[] = [
   "blazer", "jacket", "coat", "trousers", "jeans", "skirt", "dress",
-  "tee", "shirt", "hoodie", "sweat", "top", "knit", "cardigan",
+  "tee", "shirt", "hoodie", "sweat", "top", "knit", "cardigan", "shoes", "bag",
 ];
 const COLOURS = [
   "black", "white", "red", "blue", "navy", "green", "brown", "camel", "grey",
@@ -419,7 +419,7 @@ export async function smallTalk(text: string, shopperName = "Alex"): Promise<str
   const out = await callJson<{ line: string }>(
     VOICE +
       "Reply to small talk in 1-2 short sentences. Fashion editor, not a friend. Dismiss the chit-chat. " +
-      "Make no claims about products, shops or prices. End with exactly: State what you need.",
+      "Make no claims about products, shops or prices. End with exactly: State the garment.",
     `Shopper ${shopperName} says: ${text.slice(0, 300)}`,
     LINE_SCHEMA,
     80,
@@ -427,7 +427,7 @@ export async function smallTalk(text: string, shopperName = "Alex"): Promise<str
   const line = cleanLine(out?.line, 40);
   if (!line) return null;
   if (/£|\bstock\b|\bsale\b/i.test(line)) return null;
-  return /state what you need\.?$/i.test(line) ? line : `${line} State what you need.`;
+  return /state the garment\.?$/i.test(line) ? line : `${line} State the garment.`;
 }
 
 // ---------------------------------------------------------------------------

@@ -122,6 +122,10 @@ async function fetchJourney(want: string): Promise<ApiJourney> {
     if (res.ok) {
       const data = (await res.json()) as ApiJourney;
       if (Array.isArray(data.stops) && data.stops.length > 0) return data;
+      // Empty stops: clothing asks still get local shop cards; small talk keeps opener.
+      const local = shopFallbackJourney(want);
+      if (local) return local;
+      return data;
     }
   } catch {
     // timeout or network: local cards below
@@ -202,7 +206,7 @@ export function ShoppingDemo() {
     {
       id: "greet",
       from: "miranda",
-      text: "Miranda. State what you need.",
+      text: "Miranda. State the garment.",
       kind: "plan",
     },
   ]);

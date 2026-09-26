@@ -4,10 +4,13 @@ import {
   DEMO_REFUSE,
   isDemoBlazerQuery,
 } from "./demoCatalogue";
-
-export const NOTHING_WORTH = "Nothing worth your time.";
-export const STATE_NEED = "State what you need.";
-import { garmentWord, looksLikeClothingAsk, parseIntent, type QueryIntent } from "./intent";
+import {
+  garmentWord,
+  looksLikeClothingAsk,
+  parseIntent,
+  withInferredGarments,
+  type QueryIntent,
+} from "./intent";
 import { llmAvailable, mirandaSay, parseIntentLLM } from "./llm";
 import { productImageSrc, productPath } from "./products";
 import { getProfile, signalStrip } from "./profiles";
@@ -19,6 +22,11 @@ import type {
   ShopperProfile,
   Verdict,
 } from "./types";
+
+/** Cold invite when the message is not a clothing ask. Never a hard refuse. */
+export const STATE_GARMENT = "State the garment.";
+/** Alias kept for older call sites. */
+export const STATE_NEED = STATE_GARMENT;
 
 function absoluteUrl(baseUrl: string, path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
@@ -138,17 +146,17 @@ function buildLockedJourney(
 const RESOLVED = new Map<string, QueryIntent>();
 
 export async function resolveIntent(want: string): Promise<QueryIntent> {
-  const intent = parseIntent(want);
+  const intent = withInferredGarments(want, parseIntent(want));
   if (intent.garments.length > 0 || !llmAvailable() || !want.trim()) return intent;
   const llm = await parseIntentLLM(want);
   if (!llm) return intent;
   const garments = llm.garment ? [llm.garment] : (llm.garmentCandidates ?? []).slice(0, 2);
-  const merged: QueryIntent = {
+  const merged: QueryIntent = withInferredGarments(want, {
     garments,
     colours: intent.colours.length ? intent.colours : (llm.colours ?? []),
     fabrics: intent.fabrics,
     maxBudgetGbp: intent.maxBudgetGbp ?? llm.budgetMax ?? null,
-  };
+  });
   if (RESOLVED.size > 200) RESOLVED.clear();
   RESOLVED.set(want.trim().toLowerCase(), merged);
   return merged;
@@ -196,15 +204,12 @@ export async function buildJourney(
     }
     const intent = await resolveIntent(want);
     if (intent.garments.length === 0) {
-      // Soft clothing ask without a family → still never say "nothing".
+      // Soft clothing / colour / occasion without a family → still cards.
       if (looksLikeClothingAsk(want)) {
-        const fallback: QueryIntent = {
-          ...intent,
-          garments: ["top"],
-        };
+        const fallback = withInferredGarments(want, intent);
         const { buildLocalShopProducts } = await import("./webImages");
         return dedupeStops(
-          buildLocalShopProducts(fallback, 3).map((product) =>
+          buildLocalShopProducts(fallback, 3, want).map((product) =>
             toStop(product, baseUrl),
           ),
         );
@@ -213,20 +218,20 @@ export async function buildJourney(
     }
     const { searchWebProducts, buildLocalShopProducts } = await import("./webImages");
     let products = await searchWebProducts(intent, 3).catch(() => [] as Product[]);
-    // Network / enrich must never wipe clothing cards.
+    // Network / enrich must never wipe clothing cards — typed words → shop links.
     if (products.length === 0) {
-      products = buildLocalShopProducts(intent, 3);
+      products = buildLocalShopProducts(intent, 3, want);
     }
     return dedupeStops(products.map((product) => toStop(product, baseUrl)));
   } catch {
     try {
-      const intent = parseIntent(want);
+      const intent = withInferredGarments(want, parseIntent(want));
       if (intent.garments.length > 0 || looksLikeClothingAsk(want)) {
         const { buildLocalShopProducts } = await import("./webImages");
         const safe: QueryIntent =
           intent.garments.length > 0 ? intent : { ...intent, garments: ["top"] };
         return dedupeStops(
-          buildLocalShopProducts(safe, 3).map((product) =>
+          buildLocalShopProducts(safe, 3, want).map((product) =>
             toStop(product, baseUrl),
           ),
         );
@@ -262,16 +267,14 @@ function garmentLabel(intent: QueryIntent): string {
   return intent.garments.map(garmentWord).join(" / ");
 }
 
-/** Locked demo opener. Clothes always get cards. Small talk: nothing. */
+/** Locked demo opener. Clothes always get cards. Vague: invite the ask. */
 export function openerLine(want: string, stops: JourneyStop[]): string {
   const n = stops.length;
   if (isDemoBlazerQuery(want)) {
     if (n === 4) return "Four. Don't browse.";
     if (n === 0) return DEMO_REFUSE;
   } else if (n === 0) {
-    // Clothing asks must never hit this path; still refuse the empty line if they do.
-    if (looksLikeClothingAsk(want)) return STATE_NEED;
-    return NOTHING_WORTH;
+    return STATE_GARMENT;
   }
   const intent = RESOLVED.get(want.trim().toLowerCase()) ?? parseIntent(want);
   const label = garmentLabel(intent);
