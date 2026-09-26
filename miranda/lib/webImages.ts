@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import {
   garmentSearchTerms,
   garmentWord,
+  productFitsAsk,
+  titleConflictsColour,
   type GarmentKind,
   type QueryIntent,
 } from "./intent";
@@ -167,10 +169,21 @@ function inferFabric(intent: QueryIntent, title: string, hit?: RetailerHit): str
   return "unlisted";
 }
 
-function priceFor(key: string, budgetHint: number | null, hit?: RetailerHit): number {
-  if (hit?.priceGbp && hit.priceGbp > 0) return Math.round(hit.priceGbp);
+/** Real listed price when it sits inside the cap; otherwise a synthetic price that does. */
+function priceFor(key: string, budgetHint: number | null, hit?: RetailerHit): number | null {
+  if (hit?.priceGbp && hit.priceGbp > 0) {
+    const p = Math.round(hit.priceGbp);
+    if (budgetHint != null && p > budgetHint) return null;
+    return p;
+  }
   const n = parseInt(hash8(key), 16);
-  return (budgetHint ? Math.max(20, Math.round(budgetHint * 0.55)) : 35) + (n % 70);
+  if (budgetHint != null && budgetHint > 0) {
+    const cap = Math.max(1, Math.floor(budgetHint));
+    const floor = Math.min(cap, Math.max(8, Math.round(cap * 0.45)));
+    if (floor >= cap) return cap;
+    return floor + (n % (cap - floor + 1));
+  }
+  return 35 + (n % 70);
 }
 
 function buildQuery(intent: QueryIntent, garment: GarmentKind): string {
@@ -178,6 +191,7 @@ function buildQuery(intent: QueryIntent, garment: GarmentKind): string {
   if (intent.colours[0]) bits.push(intent.colours[0]);
   if (intent.fabrics[0]) bits.push(intent.fabrics[0]);
   bits.push(garmentWord(garment));
+  if (intent.maxBudgetGbp) bits.push(`under £${intent.maxBudgetGbp}`);
   return bits.join(" ");
 }
 
@@ -402,11 +416,12 @@ export async function searchWebProducts(
   const colour = intent.colours[0];
   const label = titleCase([colour, garmentWord(garment)].filter(Boolean).join(" "));
 
-  const hits = llmAvailable()
-    ? await findRetailerHits(query).catch(() => [] as RetailerHit[])
-    : [];
-
-  const cdnPool = await poolRetailerCdnHits(query, garment);
+  const [hits, cdnPool] = await Promise.all([
+    llmAvailable()
+      ? findRetailerHits(query).catch(() => [] as RetailerHit[])
+      : Promise.resolve([] as RetailerHit[]),
+    poolRetailerCdnHits(query, garment),
+  ]);
   const products: Product[] = [];
   const usedShops = new Set<string>();
 
@@ -414,6 +429,10 @@ export async function searchWebProducts(
     if (products.length >= limit) break;
     const key = shopKeyForDest(hit.url);
     if (!key || usedShops.has(key)) continue;
+    const title = hit.title.trim() || `${hit.retailer} ${label}`;
+    if (titleConflictsColour(`${title} ${hit.url}`, intent.colours)) continue;
+    const priceGbp = priceFor(hit.url, intent.maxBudgetGbp, hit);
+    if (priceGbp == null) continue;
     const cdnIdx = cdnPool.findIndex((c) => c.shopKey === key);
     const cdn = cdnIdx >= 0 ? cdnPool.splice(cdnIdx, 1)[0] : undefined;
     let upstream = hit.imageUrl;
@@ -427,8 +446,8 @@ export async function searchWebProducts(
     products.push({
       id: `ext-${hash8(hit.url)}`,
       store: "web",
-      title: hit.title.trim() || `${hit.retailer} ${label}`,
-      priceGbp: priceFor(hit.url, intent.maxBudgetGbp, hit),
+      title,
+      priceGbp,
       fabric: inferFabric(intent, hit.title, hit),
       size: "8",
       aesthetic: aestheticFor(garment),
@@ -445,14 +464,18 @@ export async function searchWebProducts(
   for (const cdn of [...cdnPool]) {
     if (products.length >= limit) break;
     if (usedShops.has(cdn.shopKey)) continue;
-    usedShops.add(cdn.shopKey);
+    const raw = `${cdn.title ?? ""} ${cdn.imageUrl} ${cdn.productUrl ?? ""}`;
+    if (titleConflictsColour(raw, intent.colours)) continue;
     const shop = RETAILERS.find((r) => r.key === cdn.shopKey) ?? RETAILERS[0]!;
     const sourceUrl = cdn.productUrl || shop.searchUrl(query);
+    const priceGbp = priceFor(sourceUrl, intent.maxBudgetGbp);
+    if (priceGbp == null) continue;
+    usedShops.add(cdn.shopKey);
     products.push({
       id: `ext-${hash8(sourceUrl)}`,
       store: "web",
       title: `${shop.name} ${label}`,
-      priceGbp: priceFor(sourceUrl, intent.maxBudgetGbp),
+      priceGbp,
       fabric: inferFabric(intent, label),
       size: "8",
       aesthetic: aestheticFor(garment),
@@ -469,13 +492,15 @@ export async function searchWebProducts(
   for (const shop of pickRetailers(query, limit)) {
     if (products.length >= limit) break;
     if (usedShops.has(shop.key)) continue;
-    usedShops.add(shop.key);
     const sourceUrl = shop.searchUrl(query);
+    const priceGbp = priceFor(sourceUrl, intent.maxBudgetGbp);
+    if (priceGbp == null) continue;
+    usedShops.add(shop.key);
     products.push({
       id: `ext-${hash8(sourceUrl)}`,
       store: "web",
       title: `${shop.name} ${label}`,
-      priceGbp: priceFor(sourceUrl, intent.maxBudgetGbp),
+      priceGbp,
       fabric: inferFabric(intent, label),
       size: "8",
       aesthetic: aestheticFor(garment),
@@ -488,16 +513,27 @@ export async function searchWebProducts(
     });
   }
 
-  const imagesKept = products.filter((p) => p.imageUrl).length;
+  let kept = products.filter((p) => productFitsAsk(p, intent));
+  if (kept.length < limit) {
+    for (const extra of buildLocalShopProducts(intent, limit)) {
+      if (kept.length >= limit) break;
+      if (kept.some((p) => p.id === extra.id || p.sourceUrl === extra.sourceUrl)) continue;
+      if (!productFitsAsk(extra, intent)) continue;
+      kept.push(extra);
+    }
+  }
+  kept = kept.slice(0, limit);
+
+  const imagesKept = kept.filter((p) => p.imageUrl).length;
   lastMeta = {
     providers: ["retailer-page"],
     openaiHits: hits.length,
     model: llmAvailable() ? currentModel() : null,
-    pagesFetched: products.length,
+    pagesFetched: kept.length,
     imagesKept,
   };
-  if (products.length > 0) remember(cacheKey, products);
-  return products.slice(0, limit);
+  if (kept.length > 0) remember(cacheKey, kept);
+  return kept;
 }
 
 export function buildLocalShopProducts(intent: QueryIntent, limit = 3): Product[] {
@@ -511,7 +547,7 @@ export function buildLocalShopProducts(intent: QueryIntent, limit = 3): Product[
       id: `ext-${hash8(url)}`,
       store: "web" as const,
       title: `${shop.name} ${label}`,
-      priceGbp: priceFor(url, intent.maxBudgetGbp),
+      priceGbp: priceFor(url, intent.maxBudgetGbp) ?? 35,
       fabric: inferFabric(intent, label),
       size: "8",
       aesthetic: aestheticFor(garment),

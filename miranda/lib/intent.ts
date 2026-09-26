@@ -309,6 +309,40 @@ export function matchesColourIntent(
   return colourMatchScore(product, intent) > 0;
 }
 
+function coloursNamedIn(text: string): string[] {
+  const found: string[] = [];
+  for (const c of COLOUR_KEYWORDS) {
+    if (c.aliases.some((a) => wordBoundaryIncludes(text, a))) {
+      if (!found.includes(c.name)) found.push(c.name);
+    }
+  }
+  return found;
+}
+
+/**
+ * Title names a colour and none of them are the asked colour or a close kin.
+ * No colour word in the title → no conflict (the search query already carried it).
+ */
+export function titleConflictsColour(title: string, asked: string[]): boolean {
+  if (asked.length === 0 || !title.trim()) return false;
+  const found = coloursNamedIn(title);
+  if (found.length === 0) return false;
+  const ok = new Set<string>();
+  for (const c of asked) {
+    ok.add(c);
+    for (const k of COLOUR_KIN[c] ?? []) ok.add(k);
+  }
+  return found.every((c) => !ok.has(c));
+}
+
+/** Non-locked listings: drop a stated other colour, and anything over the cap. */
+export function productFitsAsk(product: Product, intent: QueryIntent): boolean {
+  if (intent.maxBudgetGbp != null && product.priceGbp > intent.maxBudgetGbp) {
+    return false;
+  }
+  return !titleConflictsColour(product.title, intent.colours);
+}
+
 export function budgetMatchScore(
   product: Product,
   intent: QueryIntent,
