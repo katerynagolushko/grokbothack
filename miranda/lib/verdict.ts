@@ -105,7 +105,7 @@ function becauseLine(
       return `${capitalise(product.fabric)}. Next.`;
     }
     if (fails.includes("over_budget")) {
-      return `That budget exists for a reason. This ignores it.`;
+      return `Over. Your ceiling is £${shopper.budgetGbp}.`;
     }
     if (fails.includes("size_mismatch")) {
       return `Size ${product.size}. You wear ${shopper.size}. Pointless.`;
@@ -116,12 +116,13 @@ function becauseLine(
     return `No.`;
   }
 
+  const fabricUnknown = !product.fabric || /^(unlisted|unknown|n\/a)$/i.test(product.fabric);
+
   if (kind === "suggest" && passes.includes("aesthetic_overlap")) {
     const shopperSet = new Set(shopper.aesthetic.map((s) => s.toLowerCase()));
     const overlap = product.aesthetic.filter((a) =>
       shopperSet.has(a.toLowerCase()),
     );
-    // Prefer a sharper word than the generic first tag
     const preferred = [
       "structured",
       "sharp",
@@ -136,10 +137,15 @@ function becauseLine(
       ) ??
       overlap[0] ??
       "tailored";
-    return `This one. ${capitalise(tag)}. Wear it.`;
+    const colour = product.colourName ? capitalise(product.colourName) : null;
+    const line = colour
+      ? `${colour}. ${capitalise(tag)}. Wear it.`
+      : `${capitalise(tag)}. Wear it.`;
+    return fabricUnknown ? `${line} Fabric unlisted.` : line;
   }
 
-  return `Fine fabric. Wrong idea entirely.`;
+  if (fabricUnknown) return `Fabric unlisted. Don't invent.`;
+  return `Wrong idea. Entirely.`;
 }
 
 function capitalise(s: string): string {

@@ -222,7 +222,7 @@ export function productImageSrc(product: Product): string | undefined {
 }
 
 export function productPath(product: Product, miranda = false): string {
-  if (product.source === "web" && product.sourceUrl) return product.sourceUrl;
+  if (product.sourceUrl) return product.sourceUrl;
   const base = `/shop/${product.store}/${product.id}`;
   return miranda ? `${base}?miranda=1` : base;
 }

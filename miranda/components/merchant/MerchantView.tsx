@@ -5,6 +5,7 @@ import { BeforeAfterGrid } from "./BeforeAfterGrid";
 import { CrossStoreKnowledge } from "./CrossStoreKnowledge";
 import { PlugIn } from "./PlugIn";
 import { ProofMetrics } from "./ProofMetrics";
+import { StorefrontMorph } from "./StorefrontMorph";
 import { TasteCard } from "./TasteCard";
 import { WhyPayTable } from "./WhyPayTable";
 import styles from "./merchant-extra.module.css";
@@ -21,17 +22,21 @@ export function MerchantView() {
           </p>
           <SiteNav active="merchant" />
         </div>
-        <h1 className="merchant__headline">
-          Zara knows Zara. Miranda knows the rest.
-        </h1>
-        <p className="merchant__lede">
-          One portable shopper profile that follows the shopper across stores.
-          Your site calls our API and reorders for that shopper, with their
-          consent, per store.
-        </p>
-        <a className="merchant__cta-btn" href="#know">
-          See what we know
-        </a>
+        <div className="merchant__hero-split">
+          <div className="merchant__hero-copy">
+            <h1 className="merchant__headline">
+              Zara knows Zara. Miranda knows everything.
+            </h1>
+            <p className="merchant__lede">
+              One portable shopper profile that follows the shopper across all
+              stores and uses data on the user from every source.
+            </p>
+            <a className="merchant__cta-btn" href="#know">
+              See what we know
+            </a>
+          </div>
+          <StorefrontMorph />
+        </div>
         <div className="merchant__hero-grain" aria-hidden />
       </header>
 

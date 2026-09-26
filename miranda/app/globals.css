@@ -366,7 +366,7 @@ input {
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #8fd4b0;
+  color: #c8d0d4;
 }
 
 .wa__composer {
@@ -930,9 +930,39 @@ input {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 1.5rem 0 4rem;
+  padding: 1.5rem 0 3rem;
   isolation: isolate;
   animation: fade-rise 0.75s ease both;
+}
+
+.merchant__hero-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.75rem;
+  align-items: center;
+}
+
+/* Phone first on small screens so the mock owns the first viewport. */
+.merchant__hero-split > :last-child {
+  order: -1;
+}
+
+@media (min-width: 860px) {
+  .merchant__hero-split {
+    grid-template-columns: minmax(0, 0.95fr) minmax(420px, 500px);
+    gap: clamp(1.25rem, 3.5vw, 2.75rem);
+    align-items: center;
+  }
+
+  .merchant__hero-split > :last-child {
+    order: 0;
+  }
+}
+
+.merchant__hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .merchant__hero-grain {
@@ -958,12 +988,12 @@ input {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: clamp(2rem, 8vh, 4rem);
+  margin-bottom: clamp(1.25rem, 4vh, 2.5rem);
 }
 
 .merchant__brand {
   font-family: var(--font-display), "Times New Roman", serif;
-  font-size: clamp(2.85rem, 8vw, 5.25rem);
+  font-size: clamp(2.4rem, 6.5vw, 4.25rem);
   line-height: 0.92;
   letter-spacing: -0.03em;
   color: var(--charcoal);
@@ -981,18 +1011,18 @@ input {
 
 .merchant__headline {
   font-family: var(--font-display), "Times New Roman", serif;
-  font-size: clamp(1.85rem, 5.5vw, 3.35rem);
+  font-size: clamp(1.55rem, 3.8vw, 2.55rem);
   font-weight: 400;
-  line-height: 1.05;
-  max-width: 14ch;
+  line-height: 1.08;
+  max-width: 16ch;
   color: var(--charcoal);
   animation: fade-rise 0.85s 0.08s ease both;
 }
 
 .merchant__lede {
-  margin-top: 1.15rem;
-  max-width: 34rem;
-  font-size: clamp(1rem, 2.2vw, 1.15rem);
+  margin-top: 0.95rem;
+  max-width: 28rem;
+  font-size: clamp(0.95rem, 1.8vw, 1.05rem);
   line-height: 1.5;
   color: var(--steel);
   animation: fade-rise 0.9s 0.14s ease both;
@@ -1589,6 +1619,23 @@ input {
   line-height: 1.15;
   max-width: 18ch;
   color: var(--charcoal);
+}
+
+.journey__cta {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5c6570;
+}
+
+.journey__thumb--swatch {
+  display: inline-block;
+  width: 120px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 2px;
 }
 
 @keyframes tile-in {

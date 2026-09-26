@@ -1,0 +1,412 @@
+/* Animated partner storefront. Outside = Miranda brand frame.
+   Inside = Zara-like UX that morphs per shopper. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.95rem;
+  width: 100%;
+  max-width: min(100%, 320px);
+  margin-inline: auto;
+  animation: morphRise 0.9s 0.22s ease both;
+}
+
+@keyframes morphRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.phone {
+  width: 100%;
+  border-radius: 1.75rem;
+  padding: 0.65rem 0.58rem 0.75rem;
+  background: linear-gradient(160deg, #2a2a2a 0%, #161616 55%, #0e0e0e 100%);
+  box-shadow:
+    0 0 0 1px rgba(243, 239, 230, 0.12),
+    0 36px 64px -20px rgba(22, 22, 22, 0.58);
+  transition: box-shadow 0.55s ease;
+}
+
+.notch {
+  width: 32%;
+  height: 0.4rem;
+  margin: 0.18rem auto 0.6rem;
+  border-radius: 999px;
+  background: #0a0a0a;
+}
+
+.screen {
+  border-radius: 0.95rem;
+  overflow: hidden;
+  min-height: 26rem;
+  display: flex;
+  flex-direction: column;
+  transition:
+    background 0.55s ease,
+    color 0.55s ease,
+    letter-spacing 0.55s ease;
+}
+
+/* —— Generic: white high-street for everyone —— */
+.mode_generic .screen {
+  background: #fff;
+  color: #111;
+}
+
+.mode_generic .logo {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.mode_generic .title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.mode_generic .price {
+  font-size: 0.55rem;
+  color: #666;
+}
+
+.mode_generic .grid {
+  gap: 0.45rem;
+  padding: 0 0.55rem 0.65rem;
+}
+
+.mode_generic .photo {
+  aspect-ratio: 3 / 4;
+  border-radius: 0;
+  filter: none;
+}
+
+.mode_generic .img {
+  object-fit: cover;
+  filter: none;
+  transform: none;
+}
+
+/* —— Alex: dark editorial, monochrome, tight type —— */
+.mode_alex .screen {
+  background: #0c0c0c;
+  color: #f2f0ea;
+}
+
+.mode_alex .logo {
+  font-family: var(--font-display), "Times New Roman", serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  font-style: italic;
+}
+
+.mode_alex .title {
+  font-family: var(--font-display), "Times New Roman", serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  font-style: italic;
+}
+
+.mode_alex .price {
+  font-size: 0.52rem;
+  color: #9a9a9a;
+  letter-spacing: 0.08em;
+}
+
+.mode_alex .grid {
+  gap: 0.7rem 0.35rem;
+  padding: 0 0.7rem 0.8rem;
+}
+
+.mode_alex .photo {
+  aspect-ratio: 2 / 3;
+}
+
+.mode_alex .img {
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.15) brightness(0.92);
+  transform: scale(1.04);
+}
+
+.mode_alex .chip {
+  background: transparent;
+  color: #f2f0ea;
+  border: 1px solid rgba(242, 240, 234, 0.35);
+  letter-spacing: 0.1em;
+}
+
+/* —— Bea: loud yellow / red, heavy type —— */
+.mode_bea .screen {
+  background: #ffe600;
+  color: #b91c2c;
+}
+
+.mode_bea .logo {
+  font-family: var(--font-sans), "Helvetica Neue", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  color: #b91c2c;
+}
+
+.mode_bea .title {
+  font-family: var(--font-sans), "Helvetica Neue", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: #161616;
+}
+
+.mode_bea .price {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #b91c2c;
+}
+
+.mode_bea .grid {
+  gap: 0.3rem;
+  padding: 0 0.4rem 0.5rem;
+}
+
+.mode_bea .photo {
+  aspect-ratio: 1 / 1.05;
+  outline: 2px solid #b91c2c;
+  outline-offset: -2px;
+}
+
+.mode_bea .img {
+  object-fit: cover;
+  filter: saturate(1.35) contrast(1.08);
+  transform: scale(1.08);
+}
+
+.mode_bea .chip {
+  background: #b91c2c;
+  color: #ffe600;
+  border: none;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Shared chrome inside screen */
+.storeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.65rem 0.25rem;
+  transition: padding 0.45s ease;
+}
+
+.mode_bea .storeHead {
+  padding: 0.55rem 0.45rem 0.1rem;
+}
+
+.logo {
+  transition:
+    font-size 0.45s ease,
+    letter-spacing 0.45s ease,
+    color 0.45s ease,
+    font-style 0.45s ease;
+}
+
+.navDots {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  opacity: 0.45;
+}
+
+.chipSlot {
+  min-height: 1.55rem;
+  display: flex;
+  align-items: center;
+  padding: 0.15rem 0.65rem 0.4rem;
+}
+
+.chip {
+  display: inline-block;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.58rem;
+  line-height: 1.2;
+  animation: chipIn 0.4s ease both;
+}
+
+.chipGhost {
+  display: block;
+  height: 0.9rem;
+}
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  flex: 1;
+  transition: gap 0.45s ease, padding 0.45s ease;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+  animation: tileIn 0.45s ease both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes tileIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.photo {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #ddd;
+  transition:
+    aspect-ratio 0.45s ease,
+    outline 0.45s ease,
+    filter 0.45s ease;
+}
+
+.img {
+  transition: filter 0.55s ease, transform 0.55s ease;
+}
+
+.title,
+.price {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.45s ease, font-size 0.45s ease;
+}
+
+.dots {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.dot,
+.dotOn {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: rgba(22, 22, 22, 0.22);
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.dotOn {
+  background: var(--lipstick);
+  transform: scale(1.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap {
+    animation: none;
+  }
+
+  .tile,
+  .chip {
+    animation: none;
+  }
+
+  .screen,
+  .logo,
+  .grid,
+  .photo,
+  .img,
+  .title,
+  .price,
+  .chip {
+    transition: none;
+  }
+}
+
+@media (min-width: 860px) {
+  .wrap {
+    max-width: 480px;
+    margin-inline: 0;
+  }
+
+  .phone {
+    border-radius: 2rem;
+    padding: 0.75rem 0.68rem 0.85rem;
+  }
+
+  .screen {
+    min-height: 30rem;
+    border-radius: 1.1rem;
+  }
+
+  .mode_generic .logo {
+    font-size: 1.15rem;
+  }
+
+  .mode_alex .logo {
+    font-size: 1.25rem;
+  }
+
+  .mode_bea .logo {
+    font-size: 1.65rem;
+  }
+
+  .mode_generic .title,
+  .mode_alex .title {
+    font-size: 0.72rem;
+  }
+
+  .mode_bea .title {
+    font-size: 0.78rem;
+  }
+
+  .mode_generic .price,
+  .mode_alex .price,
+  .mode_bea .price {
+    font-size: 0.65rem;
+  }
+
+  .chip {
+    font-size: 0.68rem;
+    padding: 0.28rem 0.65rem;
+  }
+
+  .dot,
+  .dotOn {
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+}

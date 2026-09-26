@@ -30,6 +30,8 @@ type ChatMessage = {
   priceGbp?: number;
   imageSrc?: string;
   href?: string;
+  /** Hex swatch when there is no verified product photo. */
+  colour?: string;
   /** Web-sourced item: absolute image, external link. */
   external?: boolean;
 };
@@ -45,6 +47,7 @@ type ApiStop = {
   because: string;
   href: string;
   imageUrl?: string;
+  colour?: string;
 };
 
 type ApiJourney = {
@@ -60,7 +63,7 @@ function sleep(ms: number) {
 async function fetchJourney(want: string): Promise<ApiJourney> {
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 9000);
+    const timer = setTimeout(() => ctrl.abort(), 20000);
     const res = await fetch("/api/journey", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,6 +89,7 @@ async function fetchJourney(want: string): Promise<ApiJourney> {
       because: s.verdict.because,
       href: s.href,
       imageUrl: s.imageUrl,
+      colour: s.product.colour,
     })),
   };
 }
@@ -147,7 +151,7 @@ export function ShoppingDemo() {
     {
       id: "greet",
       from: "miranda",
-      text: "Miranda. State what you need. Or press Demo.",
+      text: "Miranda. State what you need.",
       kind: "plan",
     },
   ]);
@@ -238,7 +242,7 @@ export function ShoppingDemo() {
             [stop.id]: judgeProduct(local, DEMO_SHOPPER),
           }));
         }
-        const external = stop.source === "web";
+        const external = /^https?:\/\//i.test(stop.href);
         setMessages((m) => [
           ...m,
           {
@@ -249,8 +253,9 @@ export function ShoppingDemo() {
             productId: stop.id,
             productTitle: stop.title,
             priceGbp: stop.priceGbp,
-            imageSrc: local ? productImageSrc(local) : stop.imageUrl,
-            href: local ? productPath(local, true) : stop.href,
+            imageSrc: stop.imageUrl ?? (local ? productImageSrc(local) : undefined),
+            colour: stop.colour ?? local?.colour,
+            href: stop.href || (local ? productPath(local, true) : undefined),
             external,
           },
         ]);
@@ -326,7 +331,7 @@ export function ShoppingDemo() {
           <SiteNav active="shop" />
         </div>
         <p className="demo__tag">
-          Personal shopper. Exact. Unimpressed. On your side — not the seller&apos;s.
+          Cold taste. No performance.
         </p>
       </header>
 
@@ -343,7 +348,7 @@ export function ShoppingDemo() {
             <div className="wa__meta">
               <p className="wa__name">Miranda</p>
               <p className="wa__status">
-                {walking ? "Walking the floor…" : "online"}
+                {walking ? "Looking." : "online"}
               </p>
             </div>
             <button
@@ -405,8 +410,10 @@ export function ShoppingDemo() {
                             style={
                               {
                                 "--swatch":
+                                  msg.colour ??
                                   PRODUCTS.find((p) => p.id === msg.productId)
-                                    ?.colour ?? "#333",
+                                    ?.colour ??
+                                  "#333",
                               } as CSSProperties
                             }
                           />
@@ -416,9 +423,7 @@ export function ShoppingDemo() {
                         <p className="wa__preview-title">{msg.productTitle}</p>
                         <p className="wa__preview-price">£{msg.priceGbp}</p>
                         <p className="wa__preview-line">{msg.text}</p>
-                        <span className="wa__preview-link">
-                          {msg.external ? "Open source photo" : "Open product"}
-                        </span>
+                        <span className="wa__preview-link">Link</span>
                       </div>
                     </PreviewLink>
                   ) : (

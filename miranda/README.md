@@ -1,6 +1,6 @@
 # Miranda
 
-One portable shopper profile that follows the shopper across stores. Partner stores call our API to reorder their site for that shopper, with consent per store. Built for the Grok Bot Commerce hackathon. Blunt fashion-editor manner, original lines. Verdicts are deterministic TypeScript rules (budget, fabric, size, aesthetics); no API keys required for the visual demo.
+Zara knows Zara. Miranda knows everything. One portable shopper profile that follows the shopper across all stores and uses data on the user from every source. Partner stores call our API to reorder their site for that shopper, with consent per store. Built for the Grok Bot Commerce hackathon. Blunt fashion-editor manner, original lines. Verdicts are deterministic TypeScript rules (budget, fabric, size, aesthetics); no API keys required for the visual demo.
 
 Merchants do not get the private profile or the receipts. They get a consented taste card, derived cross-store signals ("wide-leg: strong, 3 buys at COS") and proof that a buyer agent on their storefront raises match rate and cuts wasted browse.
 

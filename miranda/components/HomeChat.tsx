@@ -12,6 +12,7 @@ type Stop = {
   because: string;
   href: string;
   imageUrl?: string;
+  colour?: string;
 };
 
 type Reply = {
@@ -66,14 +67,14 @@ export function HomeChat() {
           placeholder="e.g. a sharp blazer and trousers, nothing polyester"
         />
         <button type="submit" className="home-chat__submit" disabled={loading}>
-          {loading ? "One moment." : "Send"}
+          {loading ? "Working." : "Send"}
         </button>
       </form>
 
       {error && <p className="home-chat__error">{error}</p>}
 
       {stops && stops.length === 0 && (
-        <p className="home-chat__empty">Nothing worth showing. Raise your standards — or your budget.</p>
+        <p className="home-chat__empty">Nothing worth your time.</p>
       )}
 
       {stops && stops.length > 0 && (
@@ -86,23 +87,41 @@ export function HomeChat() {
                   {stop.kind === "bad" ? "Skip" : stop.kind === "suggest" ? "Stop" : "Maybe"}
                 </span>
               </div>
-              <a href={stop.href} className="journey__card">
-                <Image
-                  src={stop.imageUrl ?? `/products/${stop.id}.jpg`}
-                  alt=""
-                  width={120}
-                  height={80}
-                  className="journey__thumb"
-                  unoptimized={Boolean(stop.imageUrl && /^https?:/.test(stop.imageUrl))}
-                />
+              <a
+                href={stop.href}
+                className="journey__card"
+                target={/^https?:\/\//i.test(stop.href) ? "_blank" : undefined}
+                rel={/^https?:\/\//i.test(stop.href) ? "noopener noreferrer" : undefined}
+              >
+                {stop.imageUrl ? (
+                  <Image
+                    src={stop.imageUrl}
+                    alt=""
+                    width={120}
+                    height={80}
+                    className="journey__thumb"
+                    unoptimized={/^https?:/.test(stop.imageUrl)}
+                  />
+                ) : (
+                  <span
+                    className="journey__thumb journey__thumb--swatch"
+                    style={{ background: stop.colour ?? "#444" }}
+                    aria-hidden
+                  />
+                )}
                 <span className="journey__card-text">
                   <span className="journey__link">
                     {stop.title} — £{stop.priceGbp}
                   </span>
                   <span className="journey__because">{stop.because}</span>
+                  <span className="journey__cta">Link</span>
                 </span>
               </a>
-              <p className="journey__store">/shop/{stop.store}</p>
+              <p className="journey__store">
+                {/^https?:\/\//i.test(stop.href)
+                  ? new URL(stop.href).hostname.replace(/^www\./, "")
+                  : `/shop/${stop.store}`}
+              </p>
             </li>
           ))}
         </ol>

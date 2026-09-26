@@ -15,9 +15,8 @@ const sans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Miranda — personal shopper",
-  description:
-    "Blunt fashion-editor shopping assistant. Verdicts in code, not the seller's pitch.",
+  title: "Miranda",
+  description: "Miranda. Cold taste. No performance.",
 };
 
 export default function RootLayout({

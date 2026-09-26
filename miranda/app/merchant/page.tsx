@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { MerchantView } from "@/components/merchant/MerchantView";
 
 export const metadata: Metadata = {
-  title: "Miranda for shops",
+  title: "Miranda for shops. Zara knows Zara. Miranda knows everything.",
   description:
-    "Same catalogue, different grid. Consented taste cards and proof that a buyer agent raises match rate.",
+    "One portable shopper profile that follows the shopper across all stores and uses data on the user from every source.",
 };
 
 export default function MerchantPage() {

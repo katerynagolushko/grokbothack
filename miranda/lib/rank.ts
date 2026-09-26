@@ -298,11 +298,15 @@ function scoreProduct(
 
   if (!reason) {
     if (verdict === "suggest") {
-      reason = base.kind === "suggest" ? base.because : `This one. ${cap(overlap[0] ?? colour)}. Wear it.`;
+      reason = base.kind === "suggest"
+        ? base.because
+        : `${cap(overlap[0] ?? colour)}. Wear it.`;
     } else if (verdict === "bad") {
       reason = "No.";
     } else {
-      reason = liked ? `${cap(colour)}, at least. The rest is noise.` : "Fine fabric. Wrong idea entirely.";
+      reason = liked
+        ? `${cap(colour)}, at least. The rest is noise.`
+        : "Wrong idea. Entirely.";
     }
   }
 

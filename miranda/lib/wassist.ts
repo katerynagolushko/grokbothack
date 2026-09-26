@@ -54,13 +54,15 @@ export function isLifecycleEvent(event: string | undefined): boolean {
 // ---------------------------------------------------------------------------
 // Dedupe: Wassist retries with the same X-Wassist-Delivery, and a conversation
 // in webhook routing can receive BOTH subscription.message.received and the
-// legacy message.received for one inbound message (same message.id). We keep a
-// short-TTL in-memory map so one instance never replies twice. Serverless
-// instances do not share memory, so also untick "message.received" in the
-// dashboard when the number/conversation is routed to this webhook.
+// legacy message.received for one inbound. Prefer replying only to
+// subscription.message.received (route ignores message.received). In-memory
+// keys still catch same-instance retries; serverless instances do not share
+// memory, so also untick "message.received" in the Wassist dashboard.
 // ---------------------------------------------------------------------------
 
 const DEDUPE_TTL_MS = 10 * 60 * 1000;
+/** Short window for conversation+body: stops a second fan-out of the same text. */
+export const INBOUND_BODY_DEDUPE_TTL_MS = 20 * 1000;
 const DEDUPE_MAX_KEYS = 2000;
 const seenKeys = new Map<string, number>();
 
@@ -80,10 +82,15 @@ function pruneSeen(now: number) {
  * Returns true the first time a key is seen within the TTL, false afterwards.
  * Pass any stable identifier: delivery ID, or `conv:<id>:msg:<id>`.
  */
-export function claimOnce(key: string, now: number = Date.now()): boolean {
+export function claimOnce(
+  key: string,
+  now: number = Date.now(),
+  ttlMs: number = DEDUPE_TTL_MS,
+): boolean {
   pruneSeen(now);
-  if (seenKeys.has(key)) return false;
-  seenKeys.set(key, now + DEDUPE_TTL_MS);
+  const expires = seenKeys.get(key);
+  if (expires !== undefined && expires > now) return false;
+  seenKeys.set(key, now + ttlMs);
   return true;
 }
 
@@ -93,6 +100,17 @@ export function inboundMessageKey(event: WassistMessageEvent): string | undefine
   const msgId = event.message?.id;
   if (!conv || !msgId) return undefined;
   return `conv:${conv}:msg:${msgId}`;
+}
+
+/**
+ * Fallback when message.id is missing: same conversation + same body within a
+ * few seconds is treated as one inbound (covers dual event fan-out).
+ */
+export function inboundBodyKey(event: WassistMessageEvent): string | undefined {
+  const conv = event.conversationId;
+  const body = (event.message?.body ?? "").trim().toLowerCase();
+  if (!conv || !body) return undefined;
+  return `conv:${conv}:body:${body}`;
 }
 
 /** Test hook: clear dedupe state. */

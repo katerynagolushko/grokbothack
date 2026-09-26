@@ -135,6 +135,23 @@ function wordBoundaryIncludes(hay: string, needle: string): boolean {
   return new RegExp(`(?:^|[^a-z])${escaped}(?:$|[^a-z])`, "i").test(hay);
 }
 
+/** Soft clothing nouns that are not a specific garment family. */
+const CLOTHING_SOFT =
+  /\b(clothes|clothing|outfit|outfits|wear|wardrobe|piece|pieces|garment|garments)\b/i;
+
+/**
+ * True when the shopper is asking for clothes (not "hi" / "who are you").
+ * Garment keyword, soft clothing word, or colour plus a clothing-ish noun.
+ */
+export function looksLikeClothingAsk(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const intent = parseIntent(trimmed);
+  if (intent.garments.length > 0) return true;
+  if (CLOTHING_SOFT.test(trimmed)) return true;
+  return false;
+}
+
 export function parseIntent(text: string): QueryIntent {
   const lower = text.toLowerCase();
 

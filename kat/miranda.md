@@ -2,11 +2,11 @@
 
 ## In one sentence
 
-Miranda is one portable shopper profile that follows the shopper across stores; partner stores call our API to reorder their site for that shopper, with consent.
+One portable shopper profile that follows the shopper across all stores and uses data on the user from every source. Partner stores call our API to reorder their site for that shopper, with consent.
 
 ## The moat
 
-Cross-store purchase history. Zara knows what you bought at Zara. It has no idea you bought three pairs of wide-leg trousers at COS, returned a jacket to H&M because the sleeves ran short, and only wear black and navy. Miranda knows all of it, because the profile follows the shopper.
+Zara knows Zara. Miranda knows everything. Zara knows what you bought at Zara. It has no idea you bought three pairs of wide-leg trousers at COS, returned a jacket to H&M because the sleeves ran short, and only wear black and navy. Miranda knows all of it, because the profile follows the shopper.
 
 A store gets derived signals ("wide-leg: strong, 3 buys at COS"), never the receipts. Consent is per store and revocable. Miranda's verdict stays on the buyer's side: a store cannot hide a bad take.
 
