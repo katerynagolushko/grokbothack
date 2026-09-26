@@ -38,6 +38,37 @@ The integration surface is **MCP + websites**:
 
 So the likely hackathon shape: **we build the commerce infrastructure (Supabase + MCP server + web UI), and Grok Bots are the autonomous buyers/sellers that use it.**
 
+### Setup: do we need the desktop app?
+
+Yes. Setup requires the **Grok Bot desktop app** (macOS Apple silicon/Intel, Windows, Linux; also iOS/Android) from https://x.ai/bot, signed in with your Cursor account. Accounts on Legacy Privacy Mode can't use it. The app is only a thin client: the Bots themselves run on a cloud computer.
+
+### Can our code / Cursor control a Bot?
+
+There's **no general public API or CLI** to create Bots, send them arbitrary messages, or read transcripts (unlike Origin, which has a CLI + REST API). But there are official ways in and out:
+
+**Into the Bot (our app → Bot)**
+- **Webhook routines (official, [docs](https://cursor.com/help/grok-bot/routines))**: in the app, open a Bot → Routines → When to run → add a webhook → save. You get a `POST to` URL and a secret key. Our backend calls:
+  ```bash
+  curl -X POST "$GROK_BOT_WEBHOOK_URL" \
+    -H "Authorization: Bearer $GROK_BOT_WEBHOOK_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"event":"new_order","orderId":"123"}'
+  ```
+  The Bot wakes up with the saved routine instruction plus our JSON body. `200` = run started (not finished). Keep the key server-side only. Each run spends weekly Bot usage.
+- **Event listeners**: routines can also fire on Slack, GitHub, Microsoft Teams, Linear, Sentry, PagerDuty events, or on a cron schedule (min 5 min apart).
+- *Unofficial:* the Bot's cloud computer runs an undocumented local gateway on port 1340 (`/api/sendPrompt` etc.). It's unsupported and may break. Avoid it for the demo.
+
+**Out of the Bot (Bot → our app)**
+- **MCP server**: the Bot calls our tools (search, offer, checkout). This is the main integration.
+- **Our website**: the Bot uses it via computer use.
+- **HTTP from its terminal**: the Bot has a shell, so it can `curl` our API when told to.
+
+**Demo loop:** Supabase event → our backend POSTs to the Bot's webhook routine → Bot acts through our MCP tools/site → writes results back to Supabase → live dashboard.
+
+### If we need an LLM inside our own code: xAI API
+
+Different product, fully programmatic: https://docs.x.ai/overview. It's OpenAI-compatible (`base_url="https://api.x.ai/v1"`, key from console.x.ai) and includes the Responses API with function calling, structured outputs and web search, plus voice, image, video, and the Code API (`grok-4.7`). Use it for things like a merchant-side negotiation agent that we fully control. It's billed separately from Cursor.
+
 ### Not to be confused with
 
 | Product | What it is |
