@@ -2,7 +2,7 @@
 
 Our entry for the [Grok Bot Commerce London Hackathon](https://gb-ecommerce-hackathon-09-2026.teamdeel.workers.dev/hackathon) (26 Sep 2026, Fleek HQ, London).
 
-**Framing:** Grok Bot is the worker; we build the commerce layer it plugs into. The specific idea is still open. See the track research in [`ideation/tracks/`](./ideation/tracks/README.md).
+**What we built: Miranda.** One portable shopper profile that follows the shopper across stores. Zara knows what you bought at Zara; Miranda also knows the three pairs of wide-leg trousers from COS, the H&M jacket returned because the sleeves ran short, and that you only wear black and navy. Partner stores call our API (`/api/profile`, `/api/rank`, `/api/events`) to reorder their grid for that shopper, with consent per store. They get derived signals, never the receipts or the chats, and they cannot hide a bad take. Miranda talks to the shopper on WhatsApp (live via Wassist). Live demo: https://miranda-three-chi.vercel.app. App code is in [`miranda/`](./miranda/README.md); the one-pager is [`kat/miranda.md`](./kat/miranda.md). Track research that led here is in [`ideation/tracks/`](./ideation/tracks/README.md).
 
 ## Start here
 

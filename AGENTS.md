@@ -10,7 +10,7 @@ The theme is agentic commerce. Our framing: **Grok Bot is the worker; we build t
 
 ## Current phase
 
-Research is done; **the idea is not chosen yet** and the build hasn't started. Don't push a single idea on the team: present options with evidence (see `ideation/tracks/`). Check [`STATUS.md`](./STATUS.md) first for open decisions and next steps, and keep it updated as you work.
+**Idea chosen: Miranda.** App scaffold lives in `miranda/` — see [`STATUS.md`](./STATUS.md) for run instructions and open work (deploy, WhatsApp account wiring, optional merchant / Grok Bot).
 
 ## Repo map
 
@@ -20,6 +20,8 @@ Research is done; **the idea is not chosen yet** and the build hasn't started. D
 | `STATUS.md` | Living handoff: current decision, open questions, next steps, time left |
 | `README.md` | Short human-facing overview |
 | `CLAUDE.md`, `GEMINI.md` | Pointers to this file for tools that look for those names |
+| `miranda/` | Miranda demo: WhatsApp-style chat + shop journey on `/`. Run: `cd miranda && npm install && npm run dev` |
+| `kat/miranda.md` | Product one-pager for Miranda |
 | `ideation/hackathon.md` | Official event details: schedule, tracks, judging, prizes, sponsors |
 | `ideation/tech-stack.md` | What Cursor, Grok Bot, Origin, Supabase are, and how they fit |
 | `ideation/note.md` | Q&A from research: what Grok Bot really is, how to control it from code |
@@ -27,8 +29,6 @@ Research is done; **the idea is not chosen yet** and the build hasn't started. D
 | `ideation/tracks/` | Deep research per official track: gaps, evidence, demo-ability; `README.md` has the cross-track overview |
 | `ideation/problems-and-ideas.md` | 10 sourced real-world problems turned into ideas |
 | `ideation/shortlist-demo.md` | 3 demoable picks with demo scripts, metrics and build plans (recommended: Haggle) |
-
-Application code will live in new top-level folders once the build starts. Add them to this table when you create them.
 
 ## Hackathon facts that affect every decision
 
@@ -75,11 +75,16 @@ Match the existing `ideation/` docs:
 
 ## Code conventions
 
-No code exists yet. When the build starts, record the chosen stack, how to install, run, test and deploy, and any conventions here. Until then, the default direction from `ideation/` is:
+**Miranda (`miranda/`):** Next.js 15 App Router + TypeScript. Catalogue and shopper profile are TypeScript modules (no Supabase in this slice). Verdicts are pure functions in `lib/verdict.ts` — no LLM required. Optional `XAI_API_KEY` must not be required to run the demo.
 
-- **Backend / data:** Supabase (Postgres, Realtime for the live dashboard, Auth if needed).
-- **Agent integration:** an MCP server exposing commerce tools (e.g. `search_bundles`, `make_offer`, `checkout`), deployed at a public HTTPS URL.
-- **Counterparty agents:** xAI API.
-- **Frontend / hosting:** a small web dashboard on Vercel.
+```bash
+cd miranda && npm install && npm run dev   # http://localhost:3000
+cd miranda && npm run build && npm start
+```
 
-Prefer TypeScript for the web and MCP pieces unless the team decides otherwise, and match whatever style the first real code establishes.
+Later / optional (not required for the current demo slice):
+
+- **Backend / data:** Supabase if we add auth, realtime merchant views, or persistence.
+- **Agent integration:** MCP server for Grok Bot, public HTTPS URL.
+- **Counterparty / polish:** xAI API only when a key exists.
+- **Hosting:** Vercel.
