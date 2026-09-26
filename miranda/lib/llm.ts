@@ -528,7 +528,8 @@ export async function findRetailerHits(query: string): Promise<RetailerHit[]> {
   if (!key) return [];
   const m = await ensureModel();
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 12_000);
+  // web_search often needs ~15s; aborting at 12s left openaiHits at 0 on prod.
+  const timer = setTimeout(() => ctrl.abort(), 22_000);
   try {
     const res = await fetch(RESPONSES_URL, {
       method: "POST",
@@ -560,7 +561,7 @@ export async function findRetailerHits(query: string): Promise<RetailerHit[]> {
           `imageUrl MUST be a direct https image URL (og:image or CDN .jpg/.webp) for THAT product. ` +
           `Omit imageUrl if you cannot find a real product photo. Never invent URLs or use Wikimedia/stock.`,
         reasoning: { effort: "none" },
-        max_output_tokens: 600,
+        max_output_tokens: 800,
       }),
     });
     if (!res.ok) {
@@ -568,8 +569,14 @@ export async function findRetailerHits(query: string): Promise<RetailerHit[]> {
       return [];
     }
     const data: unknown = await res.json();
-    return parseRetailerHits(extractOutputText(data));
-  } catch {
+    const hits = parseRetailerHits(extractOutputText(data));
+    if (hits.length === 0) {
+      console.warn(`[llm] retailer search parsed 0 hits (model=${m})`);
+    }
+    return hits;
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "error";
+    console.warn(`[llm] retailer search failed: ${name}`);
     return [];
   } finally {
     clearTimeout(timer);

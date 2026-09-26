@@ -11,7 +11,7 @@ import { currentModel, llmAvailable } from "@/lib/llm";
 import { productImageSrc } from "@/lib/products";
 
 export const runtime = "nodejs";
-export const maxDuration = 25;
+export const maxDuration = 30;
 
 function hostBase(req: NextRequest): string {
   const env = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
