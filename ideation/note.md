@@ -50,8 +50,8 @@ Cursor's own git hosting ("Cursor's GitHub"), in beta since Aug 2026. It has rep
 
 **Q: What do we need to use it?**
 Your Cursor account on a paid plan, a claimed codebase name at cursor.com/codebase, and the `origin` CLI (`origin auth login` sets up git credentials).
-- This repo lives at `https://origin.cursor.com/min-thant-kyaw/grokbothack.git`.
-- We used HTTPS, because SSH failed on an unverified host key and Cursor doesn't publish its fingerprint.
+- This repo was first hosted at `https://origin.cursor.com/min-thant-kyaw/grokbothack.git` (HTTPS, because SSH failed on an unverified host key and Cursor doesn't publish its fingerprint).
+- **26 Sep:** Origin wasn't working out well, so we moved the repo to GitHub: https://github.com/minthantkyaw28/grokbothack
 
 ## What this means for our project
 
