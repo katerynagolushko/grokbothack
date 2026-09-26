@@ -23,6 +23,7 @@ Research is done; **the idea is not chosen yet** and the build hasn't started. D
 | `ideation/hackathon.md` | Official event details: schedule, tracks, judging, prizes, sponsors |
 | `ideation/tech-stack.md` | What Cursor, Grok Bot, Origin, Supabase are, and how they fit |
 | `ideation/note.md` | Q&A from research: what Grok Bot really is, how to control it from code |
+| `ideation/partners/` | Each partner's product, APIs, MCP servers, free access and gotchas; `README.md` has the comparison table |
 | `ideation/tracks/` | Deep research per official track: gaps, evidence, demo-ability; `README.md` has the cross-track overview |
 | `ideation/problems-and-ideas.md` | 10 sourced real-world problems turned into ideas |
 | `ideation/shortlist-demo.md` | 3 demoable picks with demo scripts, metrics and build plans (recommended: Haggle) |

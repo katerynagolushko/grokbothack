@@ -4,6 +4,7 @@ Knowledge base for the Grok Bot Commerce London Hackathon (26 Sep 2026).
 
 - [hackathon.md](./hackathon.md) — event details, schedule, tracks, judging criteria
 - [tech-stack.md](./tech-stack.md) — what Cursor, Grok Bot, Origin and Supabase are, and how they fit together
+- [partners/](./partners/README.md) — what each hackathon partner does, their APIs/MCP servers, free access and gotchas (Shopify, Commerce Layer, Recharge, Sanity, PostHog, Tavily, Wassist, Huge, Fleek)
 - [tracks/](./tracks/README.md) — deep research on gaps and niches in each of the 5 official tracks (64 gaps, ~400 sources), with a cross-track overview
 - [problems-and-ideas.md](./problems-and-ideas.md) — 10 real-world problems (with sources) turned into Grok Bot + our-layer ideas, plus a shortlist
 - [shortlist-demo.md](./shortlist-demo.md) — 3 demoable picks with problem statement, 3-min demo script, validation metrics, build plan (recommended: Haggle)
