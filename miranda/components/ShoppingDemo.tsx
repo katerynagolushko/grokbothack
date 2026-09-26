@@ -11,7 +11,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { buildCatalogueJourney, closingLine, openerLine } from "@/lib/journey";
+import { clientShopCards } from "@/lib/clientShops";
+import { isDemoBlazerQuery } from "@/lib/demoCatalogue";
+import { buildCatalogueJourney, closingLine, countWord, openerLine } from "@/lib/journey";
 import { PRODUCTS, productImageSrc, productPath } from "@/lib/products";
 import { DEMO_SHOPPER } from "@/lib/shopper";
 import type { Product, Verdict, VerdictKind } from "@/lib/types";
@@ -48,6 +50,7 @@ type ApiStop = {
   href: string;
   imageUrl?: string;
   colour?: string;
+  fabric?: string;
 };
 
 type ApiJourney = {
@@ -60,21 +63,7 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function fetchJourney(want: string): Promise<ApiJourney> {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 20000);
-    const res = await fetch("/api/journey", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: want }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(timer);
-    if (res.ok) return (await res.json()) as ApiJourney;
-  } catch {
-    // fall through to the catalogue-only path
-  }
+function catalogueJourney(want: string): ApiJourney {
   const stops = buildCatalogueJourney(want, DEMO_SHOPPER, "");
   return {
     opener: openerLine(want, stops),
@@ -90,8 +79,69 @@ async function fetchJourney(want: string): Promise<ApiJourney> {
       href: s.href,
       imageUrl: s.imageUrl,
       colour: s.product.colour,
+      fabric: s.product.fabric,
     })),
   };
+}
+
+function shopFallbackJourney(want: string): ApiJourney | null {
+  if (isDemoBlazerQuery(want)) return null;
+  const cards = clientShopCards(want);
+  if (cards.length === 0) return null;
+  const n = countWord(cards.length);
+  return {
+    opener: `${n}. Don't browse.`,
+    closing: `Done. ${n}. Decide.`,
+    stops: cards.map((c) => ({
+      id: c.id,
+      store: c.store,
+      source: "web" as const,
+      title: c.title,
+      priceGbp: c.priceGbp,
+      kind: "suggest" as const,
+      because: c.because,
+      href: c.href,
+      colour: c.colour,
+    })),
+  };
+}
+
+async function fetchJourney(want: string): Promise<ApiJourney> {
+  try {
+    const ctrl = new AbortController();
+    // Web search can take ~22s. Aborting sooner used to drop the cards.
+    const timer = setTimeout(() => ctrl.abort(), 28000);
+    const res = await fetch("/api/journey", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: want }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = (await res.json()) as ApiJourney;
+      if (Array.isArray(data.stops) && data.stops.length > 0) return data;
+    }
+  } catch {
+    // timeout or network: local cards below
+  }
+  if (isDemoBlazerQuery(want)) return catalogueJourney(want);
+  return shopFallbackJourney(want) ?? catalogueJourney(want);
+}
+
+function retailerLabel(href: string, store: string, title: string): string {
+  const hay = `${href} ${title}`.toLowerCase();
+  if (hay.includes("asos")) return "ASOS";
+  if (hay.includes("zara")) return "Zara";
+  if (hay.includes("mango")) return "Mango";
+  if (hay.includes("hm.com") || hay.includes("h&m")) return "H&M";
+  if (hay.includes("cos.com") || hay.includes("cos ")) return "COS";
+  if (hay.includes("wilson")) return "Wilson Carter";
+  if (hay.includes("nobody")) return "Nobody's Child";
+  if (store === "runway") return "Runway";
+  if (store === "archive") return "Archive";
+  if (store && store !== "web") return store;
+  return "Shop";
 }
 
 function interleaveStops<T extends { kind: string }>(stops: T[]): T[] {
@@ -160,6 +210,11 @@ export function ShoppingDemo() {
     Record<string, Verdict>
   >({});
   const [walking, setWalking] = useState(false);
+  const [shopQuery, setShopQuery] = useState<string | null>(null);
+  const [shopStops, setShopStops] = useState<ApiStop[] | null>(null);
+  const [shopPhase, setShopPhase] = useState<"catalogue" | "looking" | "results">(
+    "catalogue",
+  );
   const chatEndRef = useRef<HTMLDivElement>(null);
   const productRefs = useRef<Record<string, HTMLElement | null>>({});
   const walkGen = useRef(0);
@@ -198,84 +253,93 @@ export function ShoppingDemo() {
       setMirandaOn(true);
       setSeenVerdicts({});
       setFocusedId(null);
+      setShopQuery(want);
+      setShopPhase("looking");
+      productRefs.current = {};
 
+      const lookingId = `look-${gen}`;
       const userMsg: ChatMessage = {
         id: `u-${Date.now()}`,
         from: "user",
         text: want,
       };
-      setMessages((m) => [...m, userMsg]);
-
-      const journeyPromise = fetchJourney(want);
-      await sleep(450);
-      if (gen !== walkGen.current) return;
-
-      const journey = await journeyPromise;
-      if (gen !== walkGen.current) return;
-      const stops = interleaveStops(journey.stops);
-
       setMessages((m) => [
         ...m,
+        userMsg,
         {
-          id: `p-${Date.now()}`,
+          id: lookingId,
           from: "miranda",
           kind: "plan",
-          text: journey.opener,
+          text: "Looking.",
         },
       ]);
 
-      if (stops.length === 0) {
-        setWalking(false);
-        return;
-      }
+      const journeyPromise = fetchJourney(want);
 
-      await sleep(700);
-      if (gen !== walkGen.current) return;
-
-      for (const stop of stops) {
+      try {
+        const journey = await journeyPromise;
         if (gen !== walkGen.current) return;
-        const local = PRODUCTS.find((p) => p.id === stop.id);
-        if (local) {
-          focusProduct(stop.id);
-          setSeenVerdicts((prev) => ({
-            ...prev,
-            [stop.id]: judgeProduct(local, DEMO_SHOPPER),
-          }));
-        }
-        const external = /^https?:\/\//i.test(stop.href);
-        setMessages((m) => [
-          ...m,
-          {
-            id: `s-${stop.id}-${Date.now()}`,
-            from: "miranda",
-            kind: stop.kind,
-            text: stop.because,
-            productId: stop.id,
-            productTitle: stop.title,
-            priceGbp: stop.priceGbp,
-            imageSrc: stop.imageUrl ?? (local ? productImageSrc(local) : undefined),
-            colour: stop.colour ?? local?.colour,
-            href: stop.href || (local ? productPath(local, true) : undefined),
-            external,
-          },
-        ]);
-        await sleep(1100);
-      }
+        const stops = interleaveStops(journey.stops ?? []);
+        setShopStops(stops);
+        setShopPhase(stops.length > 0 ? "results" : "catalogue");
 
-      if (gen !== walkGen.current) return;
-      if (journey.closing) {
-        setMessages((m) => [
-          ...m,
-          {
-            id: `done-${Date.now()}`,
-            from: "miranda",
-            kind: "plan",
-            text: journey.closing as string,
-          },
-        ]);
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === lookingId ? { ...msg, text: journey.opener } : msg,
+          ),
+        );
+
+        if (stops.length === 0) return;
+
+        await sleep(700);
+        if (gen !== walkGen.current) return;
+
+        for (const stop of stops) {
+          if (gen !== walkGen.current) return;
+          const local = PRODUCTS.find((p) => p.id === stop.id);
+          focusProduct(stop.id);
+          if (local) {
+            setSeenVerdicts((prev) => ({
+              ...prev,
+              [stop.id]: judgeProduct(local, DEMO_SHOPPER),
+            }));
+          }
+          const external = /^https?:\/\//i.test(stop.href);
+          setMessages((m) => [
+            ...m,
+            {
+              id: `s-${stop.id}-${Date.now()}`,
+              from: "miranda",
+              kind: stop.kind,
+              text: stop.because,
+              productId: stop.id,
+              productTitle: stop.title,
+              priceGbp: stop.priceGbp,
+              imageSrc: stop.imageUrl ?? (local ? productImageSrc(local) : undefined),
+              colour: stop.colour ?? local?.colour,
+              href: stop.href || (local ? productPath(local, true) : undefined),
+              external,
+            },
+          ]);
+          await sleep(1100);
+        }
+
+        if (gen !== walkGen.current) return;
+        if (journey.closing) {
+          setMessages((m) => [
+            ...m,
+            {
+              id: `done-${Date.now()}`,
+              from: "miranda",
+              kind: "plan",
+              text: journey.closing as string,
+            },
+          ]);
+        }
+        setFocusedId(null);
+      } finally {
+        if (gen === walkGen.current) setWalking(false);
       }
-      setFocusedId(null);
-      setWalking(false);
     },
     [focusProduct],
   );
@@ -464,9 +528,11 @@ export function ShoppingDemo() {
           </form>
 
           <p className="demo__counts" aria-live="polite">
-            {mirandaOn
-              ? `${counts.suggest} suggested · ${counts.bad} bad takes`
-              : "Generic catalogue order"}
+            {mirandaOn && shopPhase === "results" && shopStops && shopStops.length > 0
+              ? `${shopStops.length} stops`
+              : mirandaOn
+                ? `${counts.suggest} suggested · ${counts.bad} bad takes`
+                : "Generic catalogue order"}
             {" · "}
             {DEMO_SHOPPER.name}: £{DEMO_SHOPPER.budgetGbp}, size{" "}
             {DEMO_SHOPPER.size}, no polyester
@@ -477,15 +543,99 @@ export function ShoppingDemo() {
           <div className="demo__shop-head">
             <div>
               <p className="demo__shop-label">Shops</p>
-              <h2 className="demo__shop-title">Runway &amp; Archive</h2>
+              <h2 className="demo__shop-title">
+                {mirandaOn && shopPhase !== "catalogue" ? "Your stops" : "Runway & Archive"}
+              </h2>
             </div>
             <p className="demo__shop-sub">
-              {mirandaOn
-                ? "Reordered for you. Bad takes stay badged."
-                : "Seller catalogue order. No taste layer."}
+              {mirandaOn && shopPhase === "looking"
+                ? `Looking. ${shopQuery ?? ""}`
+                : mirandaOn && shopPhase === "results" && shopQuery
+                  ? shopQuery
+                  : mirandaOn
+                    ? "Reordered for you. Bad takes stay badged."
+                    : "Seller catalogue order. No taste layer."}
             </p>
           </div>
 
+          {mirandaOn && shopPhase === "looking" ? (
+            <p className="demo__shop-looking" aria-live="polite">
+              Looking.
+            </p>
+          ) : mirandaOn && shopPhase === "results" && shopStops && shopStops.length > 0 ? (
+            <div className="product-grid product-grid--demo">
+              {shopStops.map((stop) => {
+                const focused = focusedId === stop.id;
+                const external = /^https?:\/\//i.test(stop.href);
+                const imageSrc = stop.imageUrl;
+                const unoptimised =
+                  Boolean(imageSrc) &&
+                  (imageSrc!.startsWith("http") || imageSrc!.includes("/api/product-image"));
+                const kind = stop.kind;
+                const label = retailerLabel(stop.href, stop.store, stop.title);
+                const meta =
+                  stop.fabric && stop.fabric !== "unlisted" ? stop.fabric : label;
+                return (
+                  <article
+                    key={stop.id}
+                    ref={(el) => {
+                      productRefs.current[stop.id] = el;
+                    }}
+                    className={[
+                      "product-tile",
+                      kind === "suggest" ? "product-tile--suggest" : "",
+                      kind === "bad" ? "product-tile--bad" : "",
+                      focused ? "product-tile--focus" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <a
+                      href={stop.href}
+                      className="product-tile__btn"
+                      target={external ? "_blank" : undefined}
+                      rel={external ? "noopener noreferrer" : undefined}
+                      onClick={() => focusProduct(stop.id)}
+                    >
+                      <div
+                        className={[
+                          "product-tile__visual",
+                          imageSrc ? "product-tile__visual--photo" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        style={{ "--swatch": stop.colour ?? "#333" } as CSSProperties}
+                        aria-hidden
+                      >
+                        {imageSrc ? (
+                          <Image
+                            src={imageSrc}
+                            alt=""
+                            fill
+                            sizes="(max-width: 900px) 45vw, 180px"
+                            className="product-tile__photo"
+                            unoptimized={unoptimised}
+                          />
+                        ) : (
+                          <span className="product-tile__silhouette" />
+                        )}
+                        <span className="product-tile__store">{label}</span>
+                      </div>
+                      <div className="product-tile__body">
+                        <h3 className="product-tile__title">{stop.title}</h3>
+                        <p className="product-tile__price">£{stop.priceGbp}</p>
+                        <p className="product-tile__meta">{meta}</p>
+                        <p className={`product-tile__verdict product-tile__verdict--${kind}`}>
+                          {kind === "bad" ? "Bad take" : kind === "suggest" ? "Suggested" : "Meh"}
+                        </p>
+                        <span className="product-tile__link">Link</span>
+                      </div>
+                    </a>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
           <div className="product-grid product-grid--demo">
             {orderedProducts.map((product) => {
               const verdict =
@@ -570,6 +720,7 @@ export function ShoppingDemo() {
               );
             })}
           </div>
+          )}
         </section>
       </div>
     </div>

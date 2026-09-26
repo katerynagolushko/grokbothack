@@ -473,6 +473,13 @@ input {
   text-align: right;
 }
 
+.demo__shop-looking {
+  padding: 2.5rem 0.25rem 1rem;
+  font-family: var(--font-display), "Times New Roman", serif;
+  font-size: 1.6rem;
+  color: var(--steel);
+}
+
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -523,6 +530,7 @@ input {
   cursor: pointer;
   color: inherit;
   padding: 0;
+  text-decoration: none;
 }
 
 .product-tile__visual {
@@ -600,6 +608,15 @@ input {
 
 .product-tile__verdict--meh {
   color: var(--steel);
+}
+
+.product-tile__link {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* —— Toggle —— */
