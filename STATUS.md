@@ -2,12 +2,13 @@
 
 Living handoff file. Update it whenever a decision is made, a blocker appears, or a step finishes. Newest information at the top of each section.
 
-**Last updated:** 26 Sep 2026, ~15:30. **Code freeze:** 16:30 (official page). **Top 5 demos:** 17:30.
+**Last updated:** 26 Sep 2026, ~15:45. **Code freeze:** 16:30 (official page). **Top 5 demos:** 17:30.
 
 ## Where we are
 
+- **Other clothing listings:** OpenAI Responses `web_search` (~12s) finds real PDPs + image URLs. Cards use `GET /api/product-image?u=` (browser UA proxy) so WhatsApp never hotlinks retailer CDNs. Omit image if none; never Wikimedia. Fallback: shop-search Links without photos. Locked black-blazer path unchanged.
 - **Black blazer path still locked.** "black blazer" / blazer / dinner blazer / black jacket → the four live retailers only (ASOS, Wilson Carter, Nobody's Child, Mango). Opener "Four stops. Don't wander." Cards and WhatsApp **Link** buttons go to the real product URLs. Photos at `public/products/{asos-blazer,wilson-charlotte,nobodys-child-blazer,mango-blazer}.jpg`.
-- **Other clothing queries are local and deterministic.** Parsed garment (+ colour) → 3 shop-search cards (Mango, H&M, COS or Zara) with title, hash GBP price, and real search Links. No image required (blank/swatch OK). Never invent a mismatched photo. Never return "Nothing worth your time." for clothes — that line is small talk only ("hi"). Network scrapers / OpenAI search are not on the hot path.
+- **Other clothing queries** return up to 3 cards with PDP Links when search works; proxied photos when the listing exposes one.
 - **Copy:** "OPEN SOURCE PHOTO" / green license shout removed. CTA is **Link** on chat cards, HomeChat, and Wassist.
 - **Pitch reframed (14:20): one portable shopper profile that follows the shopper across stores.** Partner stores call our API to reorder their site for that shopper, with consent per store. The moat is cross-store purchase history ("Zara knows Zara. Miranda knows everything."). Two mock shoppers: Alex (dark, minimal, wide-leg, size 8, no polyester, hates logo tees; bought at COS, H&M (returned), Fleek, Arket; consents runway + archive) and Bea (bright, fitted, sporty, size 10, no wool, loves logo tees; bought at Zara, Nike, Adidas, COS (returned); consents runway only).
 - **Being built now (three agents in parallel):** `lib/profiles.ts` + `lib/rank.ts`, `GET /api/profile`, `POST /api/rank`, `POST /api/events`, `/compare` (two shoppers side by side), consent step on the shop pages. `/merchant` is updated to the new pitch: hero line, "What we know that you don't" (cross-store counts, derived signals, consent pills per store), one extra proof number (signals from other stores used in ranking), "Plug in" with the three endpoints and example JSON, updated buyer/merchant/neither table. `/merchant` reads the same `lib/profiles.ts` + `deriveSignalFacts` the API routes use, so its numbers agree with `/api/profile` and `/api/rank`.
@@ -54,6 +55,7 @@ cd miranda && npm run build && npm start
 
 ## Log
 
+- **26 Sep, ~15:45:** Real listing photos via OpenAI Responses web_search (12s) + `/api/product-image` proxy. Locked blazer path unchanged. No Wikimedia. Clothing asks never empty.
 - **26 Sep, ~15:30:** Fixed clothing asks returning "Nothing worth your time." Root cause: failed web/image scrapes emptied stops and `openerLine` treated that as small talk. Now `buildLocalShopProducts` always returns 3 Mango/H&M/COS|Zara search cards for any parsed garment (blank image OK). Locked blazer path unchanged. Prod verified: `white pants` → 3 stops, no nothing-line. https://miranda-three-chi.vercel.app
 - **26 Sep, ~15:30:** Miranda spoken copy tightened to Priestley register (cold, short, dismissive; original lines only). Journey card lines stay non-rejecting for looked-up blazers/web ("Black. Structured." / "Wear it."). Opener "Four. Don't browse." Small talk still "State what you need." / "Nothing worth your time." Built and redeployed.
 - **26 Sep, ~15:15:** Fixed WhatsApp duplicate offers: `/api/wassist` replies only on `subscription.message.received` (acks and ignores legacy `message.received`), strengthens dedupe with delivery + message id + conversation+body (20s), and `dedupeStops` by product id and source URL before send. Locked "Black Blazer" path still 4 unique retailer hrefs.

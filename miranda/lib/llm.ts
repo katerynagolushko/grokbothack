@@ -53,6 +53,12 @@ function pickFromList(ids: string[]): string {
 
 async function ensureModel(): Promise<string> {
   if (resolvedModel) return resolvedModel;
+  // Prefer explicit OPENAI_MODEL (e.g. gpt-5.6-luna); else smallest Luna from /v1/models.
+  const envModel = process.env.OPENAI_MODEL?.trim();
+  if (envModel) {
+    resolvedModel = envModel;
+    return envModel;
+  }
   if (resolveInFlight) return resolveInFlight;
   resolveInFlight = (async () => {
     const key = process.env.OPENAI_API_KEY?.trim();
@@ -425,8 +431,8 @@ export async function smallTalk(text: string, shopperName = "Alex"): Promise<str
 }
 
 // ---------------------------------------------------------------------------
-// 3. Optional retailer product URLs via Responses + web_search (4s).
-//    Times out often; callers must treat [] as "use shop search pages".
+// 3. Retailer product listings via Responses + web_search (~12s).
+//    Callers must treat [] as "use shop search pages without photos".
 // ---------------------------------------------------------------------------
 
 export type RetailerHit = {
@@ -435,12 +441,19 @@ export type RetailerHit = {
   retailer: string;
   priceGbp?: number;
   fabric?: string;
-  /** Product photo from that same page, when the search result exposed one. */
+  /** Direct product photo (og:image / CDN jpg|webp) from that PDP. */
   imageUrl?: string;
 };
 
 const SHOP_HOST =
   /\b(asos\.com|zara\.com|shop\.mango\.com|mango\.com|hm\.com|www2\.hm\.com|cos\.com|arket\.com|nobodyschild\.com|wilsoncarter-london\.com)\b/i;
+
+const STOCK_IMAGE_HOST =
+  /wikimedia|openverse|pexels|unsplash|flickr|pixabay|shutterstock/i;
+
+function isSearchPageUrl(url: string): boolean {
+  return /[?&](q|kw|searchTerm|search)=/i.test(url) || /\/search(?:-results)?\b/i.test(url);
+}
 
 function extractOutputText(data: unknown): string {
   if (!data || typeof data !== "object") return "";
@@ -476,13 +489,24 @@ function parseRetailerHits(raw: string): RetailerHit[] {
     }>;
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((h) => typeof h?.url === "string" && /^https:\/\//i.test(h.url) && SHOP_HOST.test(h.url))
+      .filter(
+        (h) =>
+          typeof h?.url === "string" &&
+          /^https:\/\//i.test(h.url) &&
+          SHOP_HOST.test(h.url) &&
+          !isSearchPageUrl(h.url),
+      )
       .slice(0, 3)
       .map((h) => {
-        const imageUrl =
-          typeof h.imageUrl === "string" && /^https:\/\//i.test(h.imageUrl)
-            ? h.imageUrl
-            : undefined;
+        let imageUrl: string | undefined;
+        if (typeof h.imageUrl === "string" && /^https:\/\//i.test(h.imageUrl)) {
+          try {
+            const host = new URL(h.imageUrl).hostname;
+            if (!STOCK_IMAGE_HOST.test(host)) imageUrl = h.imageUrl;
+          } catch {
+            imageUrl = undefined;
+          }
+        }
         return {
           title: (h.title ?? "").trim() || "Seen on the web",
           url: h.url as string,
@@ -504,7 +528,7 @@ export async function findRetailerHits(query: string): Promise<RetailerHit[]> {
   if (!key) return [];
   const m = await ensureModel();
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 4000);
+  const timer = setTimeout(() => ctrl.abort(), 12_000);
   try {
     const res = await fetch(RESPONSES_URL, {
       method: "POST",
@@ -528,13 +552,15 @@ export async function findRetailerHits(query: string): Promise<RetailerHit[]> {
           },
         ],
         input:
-          `Find 2 or 3 current UK product pages for: ${query.slice(0, 80)}. ` +
-          `Retailers: ASOS, Zara, Mango, H&M, COS. ` +
-          `Reply with JSON array only: [{"title","url","retailer","priceGbp","fabric","imageUrl"}]. ` +
-          `imageUrl must be the product photo https URL from that same product page (og:image or PDP image). Omit imageUrl if unsure. ` +
-          `fabric is "unlisted" unless the page states it. Never invent polyester. GBP prices or omit.`,
+          `Find exactly 3 REAL current UK product listings (PDPs) for: ${query.slice(0, 80)}. ` +
+          `Retailers only: ASOS, Zara, Mango, H&M, COS. One listing per retailer when possible. ` +
+          `Each url MUST be a product detail page (PDP), never a search results page (?q= /search). ` +
+          `Reply with JSON array only: [{"title","url","retailer","priceGbp","imageUrl"}]. ` +
+          `title is the real product name. priceGbp is GBP if known, else omit. ` +
+          `imageUrl MUST be a direct https image URL (og:image or CDN .jpg/.webp) for THAT product. ` +
+          `Omit imageUrl if you cannot find a real product photo. Never invent URLs or use Wikimedia/stock.`,
         reasoning: { effort: "none" },
-        max_output_tokens: 450,
+        max_output_tokens: 600,
       }),
     });
     if (!res.ok) {
